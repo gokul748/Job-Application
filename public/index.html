@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Board - Home</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <!-- Hero Section -->
+      <header class="hero">
+        <h1>Find Your Dream Job</h1>
+        <p class="subtext">Discover opportunities from top companies and take the next step in your career</p>
+      </header>
+
+      <main>
+        <!-- Auth Section (shown when not logged in) -->
+        <div id="auth-section" class="auth-card">
+          <div class="auth-content">
+            <h2>Get Started Today</h2>
+            <p>Create an account to apply for jobs or login if you already have one</p>
+            <div class="auth-buttons">
+              <a class="btn btn-primary" href="/login.html">
+                <span>🔐</span> Login
+              </a>
+              <a class="btn btn-secondary" href="/register.html">
+                <span>✨</span> Create Account
+              </a>
+            </div>
+            <p class="auth-note">New here? <a href="/register.html">Sign up</a> to start applying for jobs!</p>
+          </div>
+        </div>
+
+        <!-- User Section (shown when logged in as user) -->
+        <div id="user-section" class="user-welcome" style="display: none;">
+          <div class="welcome-card">
+            <div class="welcome-content">
+              <h2>Welcome back, <span id="user-name"></span>! 👋</h2>
+              <p>Ready to find your next opportunity? Browse available jobs below.</p>
+            </div>
+            <div class="welcome-actions">
+              <a class="btn btn-primary" href="/jobs.html">Browse All Jobs</a>
+              <a class="btn btn-secondary" href="#" id="logout-link">Logout</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Section (shown when logged in as admin) -->
+        <div id="admin-section" class="user-welcome" style="display: none;">
+          <div class="welcome-card admin-card">
+            <div class="welcome-content">
+              <h2>Welcome, <span id="admin-name"></span>!</h2>
+              <p>Manage jobs and review applications.</p>
+            </div>
+            <div class="welcome-actions">
+              <a class="btn btn-primary" href="/admin.html">Post New Job</a>
+              <a class="btn btn-secondary" href="/jobs.html">View All Jobs</a>
+              <a class="btn btn-secondary" href="/admin-applications.html">View Applications</a>
+              <a class="btn btn-outline" href="#" id="admin-logout-link">Logout</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jobs Section -->
+        <section class="jobs-section">
+          <div class="section-header">
+            <h2>Available Jobs</h2>
+            <p class="section-subtitle">Explore opportunities from leading companies</p>
+          </div>
+          
+          <div id="jobs-loading" class="loading-state">Loading jobs...</div>
+          <div id="jobs-empty" class="empty-state" style="display: none;">
+            <p>No job listings available at the moment.</p>
+            <p class="empty-note">Check back soon for new opportunities!</p>
+          </div>
+          <div id="jobs" class="card-grid"></div>
+          
+          <div id="view-all-container" style="text-align: center; margin-top: 2rem; display: none;">
+            <a class="btn btn-primary" href="/jobs.html">View All Jobs →</a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="job-card-template">
+      <article class="card job-card">
+        <div class="card-header">
+          <div class="pill company"></div>
+          <h3 class="job-title"></h3>
+        </div>
+        <p class="description"></p>
+        <div class="card-footer">
+          <p class="meta">
+            <span>📅 Deadline:</span>
+            <small class="deadline"></small>
+          </p>
+          <a class="details-link btn-link" href="#">View Details →</a>
+        </div>
+      </article>
+    </template>
+
+    <script>
+      let currentUser = null;
+
+      async function checkAuth() {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            updateUI();
+          } else {
+            showAuthSection();
+          }
+        } catch (err) {
+          showAuthSection();
+        }
+      }
+
+      function showAuthSection() {
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('user-section').style.display = 'none';
+        document.getElementById('admin-section').style.display = 'none';
+      }
+
+      function updateUI() {
+        document.getElementById('auth-section').style.display = 'none';
+        if (currentUser.role === 'admin') {
+          document.getElementById('admin-section').style.display = 'block';
+          document.getElementById('admin-name').textContent = currentUser.name;
+        } else {
+          document.getElementById('user-section').style.display = 'block';
+          document.getElementById('user-name').textContent = currentUser.name;
+        }
+      }
+
+      async function logout() {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          currentUser = null;
+          showAuthSection();
+          window.location.href = '/';
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      }
+
+      document.getElementById('logout-link')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+      });
+
+      document.getElementById('admin-logout-link')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        logout();
+      });
+
+      async function loadJobs() {
+        const container = document.getElementById('jobs');
+        const loadingEl = document.getElementById('jobs-loading');
+        const emptyEl = document.getElementById('jobs-empty');
+        const viewAllEl = document.getElementById('view-all-container');
+        const template = document.getElementById('job-card-template');
+
+        try {
+          const res = await fetch('/api/jobs');
+          const data = await res.json();
+          
+          loadingEl.style.display = 'none';
+          container.innerHTML = '';
+          
+          if (!data.length) {
+            emptyEl.style.display = 'block';
+            viewAllEl.style.display = 'none';
+            return;
+          }
+
+          emptyEl.style.display = 'none';
+          
+          // Show all jobs on home page
+          data.forEach((job) => {
+            const node = template.content.cloneNode(true);
+            node.querySelector('.job-title').textContent = job.title;
+            node.querySelector('.company').textContent = job.company;
+            node.querySelector('.description').textContent = job.description;
+            node.querySelector('.deadline').textContent = new Date(job.deadline).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            node.querySelector('.details-link').href = `/job.html?id=${job.id}`;
+            container.appendChild(node);
+          });
+
+          // Show "View All" button if there are many jobs
+          if (data.length > 6) {
+            viewAllEl.style.display = 'block';
+          }
+        } catch (err) {
+          loadingEl.textContent = 'Failed to load jobs. Please try again later.';
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      }
+
+      checkAuth();
+      loadJobs();
+    </script>
+  </body>
+</html>
