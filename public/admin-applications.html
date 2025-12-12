@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Applications - Admin</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .table-container {
+        overflow-x: auto;
+        background: #fff;
+        border: 1px solid #e5e8ef;
+        border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e8ef;
+      }
+      th {
+        background: #f7f7f9;
+        font-weight: 700;
+        color: #1f2d3d;
+      }
+      tr:hover {
+        background: #f9fbff;
+      }
+      .pill-gray {
+        display: inline-block;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #f0f2f5;
+        color: #4a5568;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .text-muted {
+        color: #6b7280;
+      }
+      .nowrap {
+        white-space: nowrap;
+      }
+      .wrap {
+        white-space: normal;
+      }
+      .link {
+        color: #0b5dc5;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1>Applications</h1>
+        <p class="subtext">Review applications submitted by candidates.</p>
+        <p><a class="btn secondary" href="/">← Back to home</a></p>
+      </header>
+
+      <main>
+        <div id="auth-check" style="text-align: center; padding: 2rem;">
+          <p>Checking authentication...</p>
+        </div>
+        <div id="admin-content" style="display: none;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Applicant</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Job</th>
+                  <th>Submitted</th>
+                  <th>Resume</th>
+                  <th>Cover Letter</th>
+                </tr>
+              </thead>
+              <tbody id="apps-body"></tbody>
+            </table>
+          </div>
+          <div id="empty-state" class="empty-state" style="display: none;">
+            <p>No applications yet.</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const authCheck = document.getElementById('auth-check');
+      const adminContent = document.getElementById('admin-content');
+      const bodyEl = document.getElementById('apps-body');
+      const emptyEl = document.getElementById('empty-state');
+
+      async function checkAuth() {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (!res.ok) {
+            authCheck.innerHTML = '<p>Please <a href="/login.html">login</a> as admin.</p>';
+            return;
+          }
+          const data = await res.json();
+          if (data.user.role !== 'admin') {
+            authCheck.innerHTML = '<p>Admin access required. <a href="/login.html">Login</a>.</p>';
+            return;
+          }
+          authCheck.style.display = 'none';
+          adminContent.style.display = 'block';
+          loadApplications();
+        } catch (err) {
+          authCheck.innerHTML = '<p>Error checking authentication.</p>';
+        }
+      }
+
+      function fmtDate(val) {
+        const d = new Date(val);
+        return d.toLocaleString();
+      }
+
+      function truncate(text, len = 120) {
+        if (!text) return '';
+        if (text.length <= len) return text;
+        return text.slice(0, len) + '...';
+      }
+
+      async function loadApplications() {
+        bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">Loading...</td></tr>';
+        try {
+          const res = await fetch('/api/admin/applications', { credentials: 'include' });
+          if (!res.ok) {
+            bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">Failed to load applications.</td></tr>';
+            return;
+          }
+          const apps = await res.json();
+          if (!apps.length) {
+            bodyEl.innerHTML = '';
+            emptyEl.style.display = 'block';
+            return;
+          }
+          emptyEl.style.display = 'none';
+          bodyEl.innerHTML = '';
+          apps.forEach((app) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="nowrap">${app.name || ''}</td>
+              <td class="nowrap">${app.email || ''}</td>
+              <td class="nowrap">${app.phone || ''}</td>
+              <td class="wrap"><span class="pill-gray">${app.job_title || 'N/A'}</span><br /><span class="text-muted">${app.job_company || ''}</span></td>
+              <td class="nowrap">${fmtDate(app.submitted_at)}</td>
+              <td class="nowrap">${app.resume_path ? `<a class="link" href="/uploads/${app.resume_path}" target="_blank">Resume</a>` : '—'}</td>
+              <td class="wrap">${truncate(app.cover_letter)}</td>
+            `;
+            bodyEl.appendChild(tr);
+          });
+        } catch (err) {
+          bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">Error loading applications.</td></tr>';
+        }
+      }
+
+      checkAuth();
+    </script>
+  </body>
+</html>
+

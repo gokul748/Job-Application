@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Post a Job</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1>Post a New Job</h1>
+        <p class="subtext">Employers can add openings here.</p>
+      </header>
+
+      <main class="card">
+        <div id="auth-check" style="text-align: center; padding: 2rem;">
+          <p>Checking authentication...</p>
+        </div>
+        <div id="admin-content" style="display: none;">
+          <p style="margin-bottom: 1rem;">
+            <a class="btn secondary" href="/admin-applications.html">View Applications</a>
+          </p>
+          <form id="job-form">
+            <div class="form-group">
+              <label for="title">Job title</label>
+              <input id="title" name="title" type="text" required />
+            </div>
+            <div class="form-group">
+              <label for="company">Company</label>
+              <input id="company" name="company" type="text" required />
+            </div>
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" name="description" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="deadline">Application deadline</label>
+              <input id="deadline" name="deadline" type="datetime-local" required />
+            </div>
+            <button class="btn" type="submit">Create job</button>
+            <p id="status" class="status"></p>
+          </form>
+          <p style="margin-top: 1rem;">
+            <a class="btn secondary" href="/jobs.html">Back to listings</a>
+            <a class="btn secondary" href="/" style="margin-left: 0.5rem;">Home</a>
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      let currentUser = null;
+
+      async function checkAuth() {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (!res.ok) {
+            document.getElementById('auth-check').innerHTML =
+              '<p>Please <a href="/login.html">login</a> as admin to post jobs.</p><p><a href="/">Back to home</a></p>';
+            return;
+          }
+          const data = await res.json();
+          currentUser = data.user;
+          if (currentUser.role !== 'admin') {
+            document.getElementById('auth-check').innerHTML =
+              '<p>Admin access required. <a href="/login.html">Login</a> as admin.</p><p><a href="/">Back to home</a></p>';
+            return;
+          }
+          document.getElementById('auth-check').style.display = 'none';
+          document.getElementById('admin-content').style.display = 'block';
+        } catch (err) {
+          document.getElementById('auth-check').innerHTML =
+            '<p>Error checking authentication. <a href="/login.html">Login</a></p>';
+        }
+      }
+
+      const form = document.getElementById('job-form');
+      const statusEl = document.getElementById('status');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusEl.textContent = '';
+        statusEl.className = 'status';
+
+        const payload = {
+          title: form.title.value.trim(),
+          company: form.company.value.trim(),
+          description: form.description.value.trim(),
+          deadline: form.deadline.value || '',
+        };
+
+        if (!payload.title || !payload.company || !payload.description || !payload.deadline) {
+          statusEl.textContent = 'Please complete all fields.';
+          statusEl.classList.add('error');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          });
+
+          let data;
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            data = await res.json();
+          } else {
+            const text = await res.text();
+            statusEl.textContent = `Server error (${res.status}): ${text.substring(0, 100)}`;
+            statusEl.classList.add('error');
+            return;
+          }
+
+          if (!res.ok) {
+            statusEl.textContent = data.error || 'Could not create job.';
+            statusEl.classList.add('error');
+            return;
+          }
+
+          statusEl.textContent = 'Job created successfully!';
+          statusEl.classList.add('success');
+          form.reset();
+        } catch (err) {
+          statusEl.textContent = 'Network error. Please check your connection and try again.';
+          statusEl.classList.add('error');
+          // eslint-disable-next-line no-console
+          console.error('Error creating job:', err);
+        }
+      });
+
+      checkAuth();
+    </script>
+  </body>
+</html>
+
