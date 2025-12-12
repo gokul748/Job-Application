@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Details</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1 id="title">Job</h1>
+        <p class="subtext" id="company"></p>
+      </header>
+
+      <main class="card">
+        <p class="meta" id="deadline"></p>
+        <section id="description"></section>
+        <div style="margin-top: 1rem;">
+          <a id="apply-link" class="btn">Apply Now</a>
+          <a class="btn secondary" href="/jobs.html" style="margin-left: 0.6rem;">Back to listings</a>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const jobId = params.get('id');
+      const titleEl = document.getElementById('title');
+      const companyEl = document.getElementById('company');
+      const descriptionEl = document.getElementById('description');
+      const deadlineEl = document.getElementById('deadline');
+      const applyLink = document.getElementById('apply-link');
+
+      if (!jobId) {
+        titleEl.textContent = 'Job not found';
+      } else {
+        loadJob(jobId);
+      }
+
+      async function loadJob(id) {
+        try {
+          const res = await fetch(`/api/jobs/${id}`);
+          if (!res.ok) {
+            titleEl.textContent = 'Job not found';
+            descriptionEl.textContent = 'This job does not exist.';
+            applyLink.style.display = 'none';
+            return;
+          }
+          const job = await res.json();
+          titleEl.textContent = job.title;
+          companyEl.textContent = job.company;
+          descriptionEl.textContent = job.description;
+          deadlineEl.textContent = `Apply by: ${new Date(job.deadline).toLocaleString()}`;
+          applyLink.href = `/apply.html?id=${job.id}`;
+        } catch (err) {
+          titleEl.textContent = 'Error';
+          descriptionEl.textContent = 'Unable to load this job right now.';
+          applyLink.style.display = 'none';
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      }
+    </script>
+  </body>
+</html>
+

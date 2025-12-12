@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Listings</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1>Job Listings</h1>
+        <p class="subtext">View open roles and jump into details to apply.</p>
+        <p><a class="btn secondary" href="/">← Back to home</a></p>
+      </header>
+
+      <main>
+        <div id="auth-info" style="text-align: center; margin-bottom: 1.5rem; padding: 1rem; background: #eef2ff; border-radius: 8px;">
+          <span id="user-greeting"></span>
+          <span id="auth-links"></span>
+        </div>
+        <section id="jobs" class="card-grid"></section>
+      </main>
+    </div>
+
+    <template id="job-card-template">
+      <article class="card">
+        <div class="pill company"></div>
+        <h2 class="job-title"></h2>
+        <p class="description"></p>
+        <p class="meta">
+          <span>Deadline:</span>
+          <small class="deadline"></small>
+        </p>
+        <a class="details-link" href="#">View details</a>
+      </article>
+    </template>
+
+    <script>
+      let currentUser = null;
+
+      async function checkAuth() {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            updateAuthUI();
+          } else {
+            showLoginPrompt();
+          }
+        } catch (err) {
+          showLoginPrompt();
+        }
+      }
+
+      function updateAuthUI() {
+        const greeting = document.getElementById('user-greeting');
+        const links = document.getElementById('auth-links');
+        if (currentUser.role === 'admin') {
+          greeting.textContent = `Welcome, ${currentUser.name} (Admin) | `;
+          links.innerHTML = '<a href="/admin.html">Post Job</a> | <a href="#" id="logout-link">Logout</a>';
+        } else {
+          greeting.textContent = `Welcome, ${currentUser.name} | `;
+          links.innerHTML = '<a href="#" id="logout-link">Logout</a>';
+        }
+        document.getElementById('logout-link').addEventListener('click', async (e) => {
+          e.preventDefault();
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          window.location.href = '/';
+        });
+      }
+
+      function showLoginPrompt() {
+        const greeting = document.getElementById('user-greeting');
+        const links = document.getElementById('auth-links');
+        greeting.textContent = '';
+        links.innerHTML = '<a href="/login.html">Login</a> to apply for jobs | <a href="/register.html">Create Account</a>';
+      }
+
+      async function logout() {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          window.location.href = '/';
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      }
+
+      async function loadJobs() {
+        const container = document.getElementById('jobs');
+        const template = document.getElementById('job-card-template');
+        container.innerHTML = 'Loading...';
+
+        try {
+          const res = await fetch('/api/jobs');
+          const data = await res.json();
+          container.innerHTML = '';
+          if (!data.length) {
+            container.textContent = 'No job listings yet.';
+            return;
+          }
+
+          data.forEach((job) => {
+            const node = template.content.cloneNode(true);
+            node.querySelector('.job-title').textContent = job.title;
+            node.querySelector('.company').textContent = job.company;
+            node.querySelector('.description').textContent = job.description;
+            node.querySelector('.deadline').textContent = new Date(job.deadline).toLocaleString();
+            node.querySelector('.details-link').href = `/job.html?id=${job.id}`;
+            container.appendChild(node);
+          });
+        } catch (err) {
+          container.textContent = 'Failed to load jobs.';
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      }
+
+      checkAuth();
+      loadJobs();
+    </script>
+  </body>
+</html>
+
