@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register - Job Board</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="/">JobBoard</a>
+        <div class="nav-actions">
+          <a class="nav-admin-btn" href="/login.html">Admin Login</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <header>
+        <h1>Create Account</h1>
+        <p class="subtext">Join us to start applying for jobs</p>
+      </header>
+
+      <main class="card" style="max-width: 500px; margin: 2rem auto;">
+        <form id="register-form">
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input id="name" name="name" type="text" required autocomplete="name" />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="password">Password (min 6 characters)</label>
+            <input id="password" name="password" type="password" required autocomplete="new-password" minlength="6" />
+          </div>
+          <button class="btn" type="submit">Create Account</button>
+          <p id="status" class="status"></p>
+        </form>
+        <p style="margin-top: 1rem; text-align: center;">
+          Already have an account? <a href="/login.html">Login here</a>
+        </p>
+        <p style="text-align: center; margin-top: 0.5rem;">
+          <a href="/">Back to home</a>
+        </p>
+      </main>
+    </div>
+
+    <script>
+      const form = document.getElementById('register-form');
+      const statusEl = document.getElementById('status');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        statusEl.textContent = '';
+        statusEl.className = 'status';
+
+        const payload = {
+          name: form.name.value.trim(),
+          email: form.email.value.trim(),
+          password: form.password.value,
+        };
+
+        if (payload.password.length < 6) {
+          statusEl.textContent = 'Password must be at least 6 characters';
+          statusEl.classList.add('error');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+          });
+
+          let data;
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            data = await res.json();
+          } else {
+            const text = await res.text();
+            statusEl.textContent = `Server error (${res.status}): ${text.substring(0, 100)}`;
+            statusEl.classList.add('error');
+            return;
+          }
+
+          if (!res.ok) {
+            statusEl.textContent = data.error || 'Registration failed';
+            statusEl.classList.add('error');
+            return;
+          }
+
+          statusEl.textContent = 'Account created! Redirecting...';
+          statusEl.classList.add('success');
+          setTimeout(() => {
+            window.location.href = '/jobs.html';
+          }, 1000);
+        } catch (err) {
+          statusEl.textContent = 'Network error. Please try again.';
+          statusEl.classList.add('error');
+          // eslint-disable-next-line no-console
+          console.error(err);
+        }
+      });
+    </script>
+  </body>
+</html>
+
