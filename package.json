@@ -1,0 +1,25 @@
+{
+  "name": "gokulproj",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "jobs",
+    "express",
+    "applications"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Simple job application site with Express and MySQL",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-session": "^1.18.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.11.3"
+  }
+}
