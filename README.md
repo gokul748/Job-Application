@@ -102,38 +102,8 @@ Responses include error messages with non-200 status codes for validation failur
 
 These are served automatically by Express.
 
-## Viewing the Database
-
-Instead of using MySQL command line, you can use GUI tools to visually browse your database:
-
-**Recommended:** See `MYSQL_GUI_TOOLS.md` for detailed guide on:
-- MySQL Workbench (official, recommended)
-- DBeaver (lightweight, multi-database)
-- HeidiSQL (Windows-focused)
-- TablePlus (modern UI)
-- phpMyAdmin (web-based)
-
-**Quick Connection Details:**
-```
-Host: localhost
-Port: 3306
-Username: jobboard_user
-Password: jobboard_pass
-Database: jobboard
-```
-
-## Database Workflow
-
-See `WORKFLOW.md` for complete documentation on:
-- Database schema and table structure
-- CRUD operations breakdown
-- Authentication flow
-- Data seeding process
-- Testing checklist
-
 ## Notes
 - Adjust the `PORT` env var to change the listening port.
 - Resumes are stored on disk; move to object storage for production use.
 - Database tables are created automatically on first run.
 - Foreign key relationships ensure data integrity.
-
